@@ -1,0 +1,21 @@
+name: Sync to paypaliresh
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  sync-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to paypaliresh
+        run: |
+          git remote add target https://x-access-token:${{ secrets.SYNC_PAT }}@github.com/paypaliresh/topjobs-scraper.git
+          git push target main:main --force
