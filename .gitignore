@@ -1,0 +1,26 @@
+# Python & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Scraped Output Data & Exports
+*.json
+*.csv
+!package.json
+
+# IDE & OS Files
+.DS_Store
+.vscode/
+.idea/
+.qodo/
+
+# Logs
+*.log

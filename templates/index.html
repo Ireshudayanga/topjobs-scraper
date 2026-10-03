@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sri Lanka Multi-Portal Job Scraper & Interactive Map Dashboard</title>
+    <!-- FontAwesome & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS for Interactive Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        :root {
+            --bg-dark: #0b1120;
+            --card-bg: rgba(30, 41, 59, 0.75);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --accent: #06b6d4;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --rose: #f43f5e;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --glass-bg: rgba(15, 23, 42, 0.85);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.18) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.18) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(244, 63, 94, 0.08) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1550px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .brand-icon {
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            color: white;
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+        }
+
+        .brand-text h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.9rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #ffffff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-text p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        /* Portal Tabs / Filter Pills */
+        .portal-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        .portal-tab {
+            padding: 0.6rem 1.25rem;
+            border-radius: 999px;
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid var(--card-border);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .portal-tab:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .portal-tab.active {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .stat-icon.purple { background: rgba(99, 102, 241, 0.18); color: #818cf8; }
+        .stat-icon.cyan { background: rgba(6, 182, 212, 0.18); color: #22d3ee; }
+        .stat-icon.green { background: rgba(16, 185, 129, 0.18); color: #34d399; }
+        .stat-icon.amber { background: rgba(245, 158, 11, 0.18); color: #fbbf24; }
+
+        .stat-info .value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-main);
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .stat-info .label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Controls Card */
+        .controls-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 2fr 1fr auto;
+            gap: 1.25rem;
+            align-items: center;
+        }
+
+        @media (max-width: 900px) {
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        select, input {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 0.8rem 1rem;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            outline: none;
+            width: 100%;
+            transition: border-color 0.2s ease;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--primary);
+        }
+
+        .btn {
+            padding: 0.8rem 1.6rem;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            color: white;
+            box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35);
+        }
+
+        .btn-primary:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 22px rgba(99, 102, 241, 0.45);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* Progress Bar */
+        .progress-card {
+            display: none;
+            background: var(--card-bg);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .progress-status {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .progress-percentage {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 12px;
+            background: rgba(15, 23, 42, 0.85);
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 999px;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+        }
+
+        /* MAP CARD STYLING */
+        .map-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+        }
+
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .map-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .map-quick-filters {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .map-pill {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--card-border);
+            color: var(--text-muted);
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .map-pill:hover, .map-pill.active {
+            background: rgba(6, 182, 212, 0.2);
+            color: #22d3ee;
+            border-color: rgba(6, 182, 212, 0.4);
+        }
+
+        #srilanka-map {
+            width: 100%;
+            height: 560px;
+            border-radius: 14px;
+            border: 1px solid var(--card-border);
+            z-index: 1;
+            background: #e2e8f0;
+        }
+
+        /* Custom Leaflet Map Tooltips & Badges */
+        .leaflet-popup-content-wrapper {
+            background: rgba(15, 23, 42, 0.95) !important;
+            color: #f8fafc !important;
+            border: 1px solid var(--card-border) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+            padding: 0.5rem !important;
+        }
+        .leaflet-popup-tip {
+            background: rgba(15, 23, 42, 0.95) !important;
+        }
+
+        .custom-map-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .marker-badge-container {
+            background: linear-gradient(135deg, #6366f1, #06b6d4);
+            color: #ffffff;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.5);
+            border: 2px solid #ffffff;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .marker-badge-container:hover, .marker-badge-container.active-marker {
+            transform: scale(1.18);
+            background: linear-gradient(135deg, #f59e0b, #f43f5e);
+            box-shadow: 0 6px 22px rgba(245, 158, 11, 0.75);
+            z-index: 1000 !important;
+        }
+
+        .table-container {
+            background: var(--card-bg);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+        }
+
+        .table-header {
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--card-border);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .table-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .search-box {
+            width: 320px;
+            position: relative;
+        }
+
+        .search-box input {
+            padding-left: 2.5rem;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(15, 23, 42, 0.7);
+            padding: 1rem 1.25rem;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--card-border);
+            font-size: 0.93rem;
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.025);
+        }
+
+        /* Source Badges */
+        .source-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.3rem 0.7rem;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .source-topjobs { background: rgba(99, 102, 241, 0.18); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.35); }
+        .source-xpressjobs { background: rgba(6, 182, 212, 0.18); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.35); }
+        .source-rooster { background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); }
+        .source-jobpal { background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); }
+        .source-observerjobs { background: rgba(244, 63, 94, 0.18); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.35); }
+
+        .badge-ref {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-muted);
+            border: 1px solid var(--card-border);
+        }
+
+        .badge-location {
+            background: rgba(6, 182, 212, 0.15);
+            color: #22d3ee;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            padding: 0.25rem 0.55rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+
+        .badge-salary {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 0.25rem 0.55rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+
+        .action-btn {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: 8px;
+            background: rgba(6, 182, 212, 0.12);
+            border: 1px solid rgba(6, 182, 212, 0.25);
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            background: rgba(6, 182, 212, 0.25);
+            color: #ffffff;
+        }
+
+        .detail-btn {
+            color: var(--primary);
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            margin-right: 0.35rem;
+        }
+
+        .detail-btn:hover {
+            background: rgba(99, 102, 241, 0.25);
+            color: #ffffff;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(11, 17, 32, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .modal-card {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 2rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            animation: modalFadeIn 0.25s ease;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 1rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover { color: white; }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-info-item {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 0.85rem 1rem;
+            border-radius: 10px;
+            border: 1px solid var(--card-border);
+        }
+
+        .modal-info-item .lbl {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        .modal-info-item .val {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-briefcase"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>Sri Lanka Multi-Portal Job Scraper</h1>
+                    <p>Scrape active job opportunities across TopJobs, XpressJobs, Rooster, Jobpal & ObserverJobs</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="exportData('csv')">
+                    <i class="fa-solid fa-file-csv"></i> Export CSV
+                </button>
+                <button class="btn btn-secondary" onclick="exportData('json')">
+                    <i class="fa-solid fa-file-code"></i> Export JSON
+                </button>
+            </div>
+        </header>
+
+        <!-- Portal Tabs -->
+        <div class="portal-tabs">
+            <button class="portal-tab active" data-source="ALL" onclick="selectPortalTab('ALL')">
+                <i class="fa-solid fa-layer-group"></i> All 5 Portals
+            </button>
+            <button class="portal-tab" data-source="topjobs" onclick="selectPortalTab('topjobs')">
+                <i class="fa-solid fa-building"></i> TopJobs.lk
+            </button>
+            <button class="portal-tab" data-source="xpressjobs" onclick="selectPortalTab('xpressjobs')">
+                <i class="fa-solid fa-bolt"></i> XpressJobs.lk
+            </button>
+            <button class="portal-tab" data-source="rooster" onclick="selectPortalTab('rooster')">
+                <i class="fa-solid fa-crow"></i> Rooster.jobs
+            </button>
+            <button class="portal-tab" data-source="jobpal" onclick="selectPortalTab('jobpal')">
+                <i class="fa-solid fa-handshake"></i> Jobpal.lk
+            </button>
+            <button class="portal-tab" data-source="observerjobs" onclick="selectPortalTab('observerjobs')">
+                <i class="fa-solid fa-newspaper"></i> ObserverJobs.lk
+            </button>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon purple"><i class="fa-solid fa-list-check"></i></div>
+                <div class="stat-info">
+                    <div class="value" id="stat-total">0</div>
+                    <div class="label">Total Jobs Found</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon cyan"><i class="fa-solid fa-building"></i></div>
+                <div class="stat-info">
+                    <div class="value" id="stat-employers">0</div>
+                    <div class="label">Active Employers</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green"><i class="fa-solid fa-location-dot"></i></div>
+                <div class="stat-info">
+                    <div class="value" id="stat-locations">0</div>
+                    <div class="label">Towns / Cities</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon amber"><i class="fa-solid fa-globe"></i></div>
+                <div class="stat-info">
+                    <div class="value" id="stat-sources">All Portals</div>
+                    <div class="label">Active Source</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls Card -->
+        <div class="controls-card">
+            <div class="controls-grid">
+                <div>
+                    <label style="display:block; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">Select Source Portal</label>
+                    <select id="sourceSelect" onchange="syncPortalTab(this.value)">
+                        <option value="ALL">All Portals (Combined Scrape)</option>
+                        <option value="topjobs">TopJobs.lk</option>
+                        <option value="xpressjobs">XpressJobs.lk</option>
+                        <option value="rooster">Rooster.jobs</option>
+                        <option value="jobpal">Jobpal.lk</option>
+                        <option value="observerjobs">ObserverJobs.lk</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">TopJobs Category Filter</label>
+                    <select id="categorySelect">
+                        <option value="SDQ">IT-Sware/DB/QA/Web/Graphics/GIS (SDQ)</option>
+                        {% for code, name in categories.items() %}
+                            {% if code != 'SDQ' %}
+                            <option value="{{ code }}">{{ name }} ({{ code }})</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">Options</label>
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="deepScrape"> Deep Details
+                    </label>
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom: 0.5rem; font-size: 0.85rem; color: transparent;">Action</label>
+                    <button class="btn btn-primary" id="scrapeBtn" onclick="runScraperStream()">
+                        <i class="fa-solid fa-bolt"></i> Scrape Jobs
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-Time Progress Bar Card -->
+        <div class="progress-card" id="progressCard">
+            <div class="progress-header">
+                <div class="progress-status" id="progressMessage">
+                    <i class="fa-solid fa-spinner fa-spin" style="color: var(--accent);"></i> Connecting to server...
+                </div>
+                <div class="progress-percentage" id="progressPercent">0%</div>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <!-- SRI LANKA INTERACTIVE JOB MAP CARD -->
+        <div class="map-card">
+            <div class="map-header">
+                <h2>
+                    <i class="fa-solid fa-map-location-dot" style="color: var(--accent);"></i> Sri Lanka Interactive Job Map
+                </h2>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span id="mapFilterStatus" style="font-size: 0.85rem; color: var(--text-muted);">Click any district pin to filter listings</span>
+                    <button id="resetMapBtn" class="btn btn-secondary" style="display:none; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="clearMapFilter()">
+                        <i class="fa-solid fa-rotate-left"></i> Reset Map Filter
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick District Selector Pills -->
+            <div class="map-quick-filters">
+                <span class="map-pill active" onclick="filterMapByDistrict('all', this)">All Sri Lanka</span>
+                <span class="map-pill" onclick="filterMapByDistrict('colombo', this)">Colombo</span>
+                <span class="map-pill" onclick="filterMapByDistrict('gampaha', this)">Gampaha</span>
+                <span class="map-pill" onclick="filterMapByDistrict('kandy', this)">Kandy</span>
+                <span class="map-pill" onclick="filterMapByDistrict('galle', this)">Galle</span>
+                <span class="map-pill" onclick="filterMapByDistrict('matara', this)">Matara</span>
+                <span class="map-pill" onclick="filterMapByDistrict('jaffna', this)">Jaffna</span>
+                <span class="map-pill" onclick="filterMapByDistrict('kurunegala', this)">Kurunegala</span>
+                <span class="map-pill" onclick="filterMapByDistrict('remote', this)">Remote / WFH</span>
+            </div>
+
+            <!-- Leaflet Map Canvas -->
+            <div id="srilanka-map"></div>
+        </div>
+
+        <!-- Table Card -->
+        <div class="table-container">
+            <div class="table-header">
+                <h2><i class="fa-solid fa-list" style="color: var(--accent);"></i> Job Opportunities Dashboard</h2>
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="searchInput" placeholder="Search title, employer, town, source..." onkeyup="filterJobs()">
+                </div>
+            </div>
+
+            <table id="jobsTable">
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Ref #</th>
+                        <th>Position Title</th>
+                        <th>Employer</th>
+                        <th>Category / Dept</th>
+                        <th>Job Type</th>
+                        <th>Location</th>
+                        <th>Posted / Closing</th>
+                        <th>Salary</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="jobsTbody">
+                    <tr>
+                        <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                            Click "Scrape Jobs" to load listings across Sri Lankan job portals.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Job Details Modal -->
+    <div class="modal-overlay" id="jobModal" onclick="closeModal(event)">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <span class="source-badge" id="m-source-badge">Portal</span>
+                    <h2 style="margin-top: 0.5rem; font-size: 1.4rem;" id="m-title">Job Title</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;" id="m-employer">Employer Name</p>
+                </div>
+                <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="modal-grid">
+                <div class="modal-info-item">
+                    <div class="lbl">Reference #</div>
+                    <div class="val" id="m-ref">-</div>
+                </div>
+                <div class="modal-info-item">
+                    <div class="lbl">Location</div>
+                    <div class="val" id="m-location">-</div>
+                </div>
+                <div class="modal-info-item">
+                    <div class="lbl">Job Type</div>
+                    <div class="val" id="m-jobtype">-</div>
+                </div>
+                <div class="modal-info-item">
+                    <div class="lbl">Salary</div>
+                    <div class="val" id="m-salary">-</div>
+                </div>
+                <div class="modal-info-item">
+                    <div class="lbl">Posted Date</div>
+                    <div class="val" id="m-opening">-</div>
+                </div>
+                <div class="modal-info-item">
+                    <div class="lbl">Closing Date</div>
+                    <div class="val" id="m-closing">-</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <div style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Summary & Overview</div>
+                <div style="background: rgba(15, 23, 42, 0.7); padding: 1rem; border-radius: 12px; border: 1px solid var(--card-border); font-size: 0.95rem; line-height: 1.6; white-space: pre-line;" id="m-snippet">
+                    No detailed overview available.
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                <a class="btn btn-primary" id="m-link" href="#" target="_blank" style="background: linear-gradient(135deg, #059669, #10b981); border: none; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);">
+                    <i class="fa-solid fa-paper-plane"></i> Apply / View Official Advert
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS Library -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        let currentJobs = [];
+        let activeMapFilterKey = null;
+        let mapInstance = null;
+        let mapMarkersLayerGroup = null;
+        let eventSource = null;
+
+        // Comprehensive Sri Lanka District & Location Dictionary
+        const SRI_LANKA_LOCATIONS = {
+            "colombo": { name: "Colombo", lat: 6.9271, lng: 79.8612, aliases: ["colombo", "colombo 01", "colombo 02", "colombo 03", "colombo 04", "colombo 05", "colombo 06", "colombo 07", "colombo 08", "colombo 09", "colombo 10", "colombo 11", "colombo 12", "colombo 13", "colombo 14", "colombo 15", "nugegoda", "maharagama", "dehiwala", "mount lavinia", "kotte", "battaramulla", "malabe", "rajagiriya", "boralesgamuwa", "piliyandala", "wellawatte", "homagama", "padukka", "hanwella", "kaduwela"] },
+            "gampaha": { name: "Gampaha", lat: 7.0840, lng: 79.9925, aliases: ["gampaha", "negombo", "wattala", "ja-ela", "kelaniya", "kiribathgoda", "yakkala", "biyagama", "minuwangoda", "nittambuwa", "kadawatha", "veyangoda", "mirigama", "seeduwa", "ragama"] },
+            "kalutara": { name: "Kalutara", lat: 6.5854, lng: 79.9607, aliases: ["kalutara", "panadura", "horana", "beruwala", "aluthgama", "matugama", "wadduwa", "bandaragama"] },
+            "kandy": { name: "Kandy", lat: 7.2906, lng: 80.6337, aliases: ["kandy", "peradeniya", "katugastota", "gampola", "nawalapitiya", "kundasale", "digana", "gelioya", "kadugannawa", "teldeniya"] },
+            "matale": { name: "Matale", lat: 7.4675, lng: 80.6234, aliases: ["matale", "dambulla", "sigiriya", "rattota", "galevela"] },
+            "nuwara eliya": { name: "Nuwara Eliya", lat: 6.9497, lng: 80.7891, aliases: ["nuwara eliya", "hatton", "talawakele", "ragala"] },
+            "galle": { name: "Galle", lat: 6.0535, lng: 80.2210, aliases: ["galle", "hikkaduwa", "karapitiya", "ambalangoda", "bentota", "el pitiya", "baddegama"] },
+            "matara": { name: "Matara", lat: 5.9549, lng: 80.5550, aliases: ["matara", "weligama", "solis matara", "dikwella", "hakmana", "deniyaya"] },
+            "hambantota": { name: "Hambantota", lat: 6.1429, lng: 81.1212, aliases: ["hambantota", "tangalle", "ambalantota", "tissamaharama"] },
+            "jaffna": { name: "Jaffna", lat: 9.6615, lng: 80.0255, aliases: ["jaffna", "chavakachcheri", "nallur", "point pedro"] },
+            "kilinochchi": { name: "Kilinochchi", lat: 9.3803, lng: 80.3770, aliases: ["kilinochchi"] },
+            "mannar": { name: "Mannar", lat: 8.9810, lng: 79.9044, aliases: ["mannar"] },
+            "vavuniya": { name: "Vavuniya", lat: 8.7542, lng: 80.4982, aliases: ["vavuniya"] },
+            "mullaitivu": { name: "Mullaitivu", lat: 9.2671, lng: 80.8142, aliases: ["mullaitivu", "mullativu"] },
+            "batticaloa": { name: "Batticaloa", lat: 7.7170, lng: 81.7000, aliases: ["batticaloa", "kattankudy", "chenkalady"] },
+            "ampara": { name: "Ampara", lat: 7.2886, lng: 81.6747, aliases: ["ampara", "kalmunai", "sammanthurai"] },
+            "trincomalee": { name: "Trincomalee", lat: 8.5874, lng: 81.2152, aliases: ["trincomalee", "kinniya", "kantale"] },
+            "kurunegala": { name: "Kurunegala", lat: 7.4863, lng: 80.3623, aliases: ["kurunegala", "kuliyapitiya", "pannala", "giriulla", "narammala", "mawathagama"] },
+            "puttalam": { name: "Puttalam", lat: 8.0362, lng: 79.8283, aliases: ["puttalam", "chilaw", "marawila", "dankotuwa", "wenappuwa", "halawatha"] },
+            "anuradhapura": { name: "Anuradhapura", lat: 8.3114, lng: 80.4037, aliases: ["anuradhapura", "kekirawa", "epawala", "tambuttegama"] },
+            "polonnaruwa": { name: "Polonnaruwa", lat: 7.9403, lng: 81.0188, aliases: ["polonnaruwa", "hingurakgoda", "kaduruwela"] },
+            "badulla": { name: "Badulla", lat: 6.9934, lng: 81.0550, aliases: ["badulla", "bandarawela", "haputale", "diyatalawa", "welimada", "mahiyanganaya"] },
+            "monaragala": { name: "Monaragala", lat: 6.8718, lng: 81.3487, aliases: ["monaragala", "wellawaya", "kataragama", "bibile"] },
+            "ratnapura": { name: "Ratnapura", lat: 6.6828, lng: 80.4014, aliases: ["ratnapura", "embilipitiya", "balangoda", "pelmadulla"] },
+            "kegalle": { name: "Kegalle", lat: 7.2513, lng: 80.3464, aliases: ["kegalle", "kegelle", "mawanella", "rambukkana", "ruwanwella", "yatiyantota", "warakapola"] },
+            "remote": { name: "Remote / Islandwide", lat: 7.8731, lng: 80.7718, aliases: ["remote", "island wide", "islandwide", "work from home", "wfh", "hybrid", "foreign job"] }
+        };
+
+        function getSourceBadgeClass(src) {
+            src = (src || '').toLowerCase();
+            if (src.includes('topjobs')) return 'source-topjobs';
+            if (src.includes('xpress')) return 'source-xpressjobs';
+            if (src.includes('rooster')) return 'source-rooster';
+            if (src.includes('jobpal')) return 'source-jobpal';
+            if (src.includes('observer')) return 'source-observerjobs';
+            return 'source-topjobs';
+        }
+
+        function getSourceIcon(src) {
+            src = (src || '').toLowerCase();
+            if (src.includes('topjobs')) return 'fa-building';
+            if (src.includes('xpress')) return 'fa-bolt';
+            if (src.includes('rooster')) return 'fa-crow';
+            if (src.includes('jobpal')) return 'fa-handshake';
+            if (src.includes('observer')) return 'fa-newspaper';
+            return 'fa-globe';
+        }
+
+        function initMap() {
+            if (mapInstance) return;
+
+            // Initialize Leaflet map centered on Sri Lanka
+            mapInstance = L.map('srilanka-map', {
+                center: [7.8731, 80.7718],
+                zoom: 8,
+                zoomSnap: 0.5,
+                zoomControl: true
+            });
+
+            // 100% Free Public Light & Dark Tile Providers - Zero API Key & Zero Watermarks
+            const lightOsmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+            const esriLightUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
+            const esriDarkUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+
+            const osmLayer = L.tileLayer(lightOsmUrl, {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            });
+
+            const esriLightLayer = L.tileLayer(esriLightUrl, {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ',
+                maxZoom: 18
+            });
+
+            const darkLayer = L.tileLayer(esriDarkUrl, {
+                attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+                maxZoom: 16
+            });
+
+            // Set DEFAULT to Light Design (OpenStreetMap Standard)
+            osmLayer.addTo(mapInstance);
+
+            // Layer Switcher
+            L.control.layers({
+                "Light Design (OpenStreetMap)": osmLayer,
+                "Light Street Map (Esri)": esriLightLayer,
+                "Dark Canvas Mode": darkLayer
+            }, null, { position: 'topright' }).addTo(mapInstance);
+
+            mapMarkersLayerGroup = L.layerGroup().addTo(mapInstance);
+        }
+
+        function matchJobToLocationKey(job) {
+            const textToSearch = `${job.town || ''} ${job.location || ''} ${job.title || ''} ${job.description_snippet || ''}`.toLowerCase();
+            
+            for (const [key, loc] of Object.entries(SRI_LANKA_LOCATIONS)) {
+                for (const alias of loc.aliases) {
+                    if (textToSearch.includes(alias)) {
+                        return key;
+                    }
+                }
+            }
+            return "colombo"; // default fallback for unmatched Sri Lanka listings
+        }
+
+        function updateMapMarkers(jobsList) {
+            if (!mapInstance || !mapMarkersLayerGroup) return;
+
+            mapMarkersLayerGroup.clearLayers();
+
+            // Group jobs by location key
+            const locCounts = {};
+            const locJobsMap = {};
+
+            Object.keys(SRI_LANKA_LOCATIONS).forEach(k => {
+                locCounts[k] = 0;
+                locJobsMap[k] = [];
+            });
+
+            (jobsList || []).forEach(j => {
+                const locKey = matchJobToLocationKey(j);
+                if (locCounts[locKey] !== undefined) {
+                    locCounts[locKey]++;
+                    locJobsMap[locKey].push(j);
+                }
+            });
+
+            // Add markers for locations with count > 0
+            Object.entries(SRI_LANKA_LOCATIONS).forEach(([key, loc]) => {
+                const count = locCounts[key] || 0;
+                if (count > 0) {
+                    const isActive = (activeMapFilterKey === key);
+
+                    const badgeHtml = `
+                        <div class="custom-map-marker">
+                            <div class="marker-badge-container ${isActive ? 'active-marker' : ''}">
+                                ${loc.name} (${count})
+                            </div>
+                        </div>
+                    `;
+
+                    const icon = L.divIcon({
+                        html: badgeHtml,
+                        className: '',
+                        iconSize: [120, 30],
+                        iconAnchor: [60, 15]
+                    });
+
+                    const marker = L.marker([loc.lat, loc.lng], { icon: icon });
+
+                    // Rich Interactive Popup with Job Cards & Direct Detail Actions
+                    const locJobs = locJobsMap[key] || [];
+                    const maxShown = 4;
+
+                    const jobCardsHtml = locJobs.slice(0, maxShown).map(j => {
+                        const badgeCls = getSourceBadgeClass(j.source);
+                        const iconCls = getSourceIcon(j.source);
+                        return `
+                        <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(255, 255, 255, 0.12); padding: 0.65rem 0.75rem; border-radius: 10px; margin-top: 0.5rem; text-align: left;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.35rem;">
+                                <strong style="color: #f8fafc; font-size: 0.88rem; line-height: 1.25; flex: 1;">${j.title}</strong>
+                                <span class="source-badge ${badgeCls}" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">
+                                    <i class="fa-solid ${iconCls}"></i> ${j.source}
+                                </span>
+                            </div>
+                            <div style="color: #94a3b8; font-size: 0.78rem; margin-bottom: 0.4rem; display: flex; flex-direction: column; gap: 0.15rem;">
+                                <div><i class="fa-solid fa-building" style="color:#818cf8;"></i> <strong>${j.employer || 'Employer'}</strong></div>
+                                <div style="display: flex; gap: 0.75rem; margin-top: 0.15rem; flex-wrap: wrap;">
+                                    <span><i class="fa-solid fa-money-bill-wave" style="color:#34d399;"></i> ${j.salary || 'Negotiable'}</span>
+                                    <span><i class="fa-regular fa-clock" style="color:#fbbf24;"></i> Closing: ${j.closing_date || 'Open'}</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.4rem; margin-top: 0.45rem;">
+                                <button style="flex: 1; padding: 0.35rem 0.5rem; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(99, 102, 241, 0.5); color: #a5b4fc; border-radius: 6px; font-size: 0.76rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem;" onclick="openDetailsModalByRef('${j.ref_no}')">
+                                    <i class="fa-solid fa-eye"></i> View Details
+                                </button>
+                                <a href="${j.detail_url}" target="_blank" style="padding: 0.35rem 0.55rem; background: rgba(6, 182, 212, 0.2); border: 1px solid rgba(6, 182, 212, 0.4); color: #22d3ee; border-radius: 6px; font-size: 0.76rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                    <i class="fa-solid fa-external-link"></i> Link
+                                </a>
+                            </div>
+                        </div>
+                    `}).join('');
+
+                    const popupContent = `
+                        <div style="min-width: 290px; max-width: 320px; font-family: 'Outfit', sans-serif;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 0.4rem; margin-bottom: 0.2rem;">
+                                <strong style="color:#22d3ee; font-size: 1.05rem;"><i class="fa-solid fa-location-dot"></i> ${loc.name}</strong>
+                                <span style="background: rgba(99, 102, 241, 0.3); color: #818cf8; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700;">${count} Opportunities</span>
+                            </div>
+                            <div style="max-height: 280px; overflow-y: auto; padding-right: 0.2rem;">
+                                ${jobCardsHtml}
+                                ${locJobs.length > maxShown ? `<div style="text-align:center; font-size: 0.78rem; color: #94a3b8; margin-top: 0.5rem; font-style: italic;">+ ${locJobs.length - maxShown} more listings in table below</div>` : ''}
+                            </div>
+                            <button style="margin-top: 0.65rem; width: 100%; padding: 0.45rem; background: linear-gradient(135deg, #6366f1, #06b6d4); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" onclick="filterMapByDistrict('${key}'); scrollToTable();">
+                                <i class="fa-solid fa-filter"></i> Filter Table by ${loc.name}
+                            </button>
+                        </div>
+                    `;
+
+                    marker.bindPopup(popupContent, { maxWidth: 340 });
+
+                    marker.on('click', () => {
+                        filterMapByDistrict(key);
+                    });
+
+                    mapMarkersLayerGroup.addLayer(marker);
+                }
+            });
+
+            // Update Map Filter status text
+            const statusEl = document.getElementById('mapFilterStatus');
+            const resetBtn = document.getElementById('resetMapBtn');
+            if (activeMapFilterKey && SRI_LANKA_LOCATIONS[activeMapFilterKey]) {
+                const locName = SRI_LANKA_LOCATIONS[activeMapFilterKey].name;
+                const filteredCount = locCounts[activeMapFilterKey] || 0;
+                statusEl.innerHTML = `<span style="color:var(--accent); font-weight:700;"><i class="fa-solid fa-location-dot"></i> Filtered by ${locName} (${filteredCount} jobs)</span>`;
+                resetBtn.style.display = 'inline-flex';
+            } else {
+                statusEl.innerText = `Showing all ${(jobsList || []).length} job opportunities on Sri Lanka Map`;
+                resetBtn.style.display = 'none';
+            }
+        }
+
+        function filterMapByDistrict(key, pillEl) {
+            if (key === 'all') {
+                activeMapFilterKey = null;
+            } else {
+                if (activeMapFilterKey === key) {
+                    activeMapFilterKey = null; // toggle off if clicked again
+                } else {
+                    activeMapFilterKey = key;
+                }
+            }
+
+            // Sync quick filter pills state
+            document.querySelectorAll('.map-pill').forEach(p => p.classList.remove('active'));
+            if (pillEl) {
+                pillEl.classList.add('active');
+            } else if (!activeMapFilterKey) {
+                document.querySelector('.map-pill[onclick*="all"]').classList.add('active');
+            } else {
+                const targetPill = document.querySelector(`.map-pill[onclick*="${activeMapFilterKey}"]`);
+                if (targetPill) targetPill.classList.add('active');
+            }
+
+            // Pan map to selected district if active
+            if (activeMapFilterKey && SRI_LANKA_LOCATIONS[activeMapFilterKey]) {
+                const targetLoc = SRI_LANKA_LOCATIONS[activeMapFilterKey];
+                mapInstance.flyTo([targetLoc.lat, targetLoc.lng], 9, { duration: 1 });
+            } else {
+                mapInstance.flyTo([7.8731, 80.7718], 7.8, { duration: 1 });
+            }
+
+            filterJobs();
+        }
+
+        function clearMapFilter() {
+            activeMapFilterKey = null;
+            document.querySelectorAll('.map-pill').forEach(p => p.classList.remove('active'));
+            document.querySelector('.map-pill[onclick*="all"]').classList.add('active');
+            mapInstance.flyTo([7.8731, 80.7718], 7.8, { duration: 1 });
+            filterJobs();
+        }
+
+        function selectPortalTab(srcKey) {
+            document.querySelectorAll('.portal-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.getAttribute('data-source') === srcKey);
+            });
+            document.getElementById('sourceSelect').value = srcKey;
+            runScraperStream();
+        }
+
+        function syncPortalTab(srcKey) {
+            document.querySelectorAll('.portal-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.getAttribute('data-source') === srcKey);
+            });
+        }
+
+        function runScraperStream() {
+            const source = document.getElementById('sourceSelect').value;
+            const category = document.getElementById('categorySelect').value;
+            const deep = document.getElementById('deepScrape').checked;
+            
+            const progressCard = document.getElementById('progressCard');
+            const progressFill = document.getElementById('progressFill');
+            const progressPercent = document.getElementById('progressPercent');
+            const progressMessage = document.getElementById('progressMessage');
+            const tbody = document.getElementById('jobsTbody');
+            const btn = document.getElementById('scrapeBtn');
+
+            progressCard.style.display = 'block';
+            progressFill.style.width = '15%';
+            progressPercent.innerText = '15%';
+            progressMessage.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color: var(--accent);"></i> Scraping active job opportunities...`;
+            
+            tbody.style.opacity = '0.35';
+            btn.disabled = true;
+
+            let fallbackTriggered = false;
+
+            function runFallbackFetch() {
+                if (fallbackTriggered) return;
+                fallbackTriggered = true;
+
+                if (eventSource) {
+                    try { eventSource.close(); } catch(e){}
+                }
+
+                progressMessage.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color: var(--accent);"></i> Fetching listings directly from server...`;
+                progressFill.style.width = '50%';
+                progressPercent.innerText = '50%';
+
+                fetch(`/api/scrape?source=${source}&category=${category}&deep=${deep}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success' || data.jobs) {
+                            progressFill.style.width = '100%';
+                            progressPercent.innerText = '100%';
+                            progressMessage.innerHTML = `<i class="fa-solid fa-circle-check" style="color: var(--success);"></i> Completed! Found ${data.count || (data.jobs || []).length} job opportunities.`;
+
+                            currentJobs = data.jobs || [];
+                            filterJobs();
+                            updateStats(currentJobs, source);
+
+                            btn.disabled = false;
+                            tbody.style.opacity = '1';
+
+                            setTimeout(() => {
+                                progressCard.style.display = 'none';
+                            }, 2500);
+                        } else {
+                            throw new Error(data.message || 'Scrape failed');
+                        }
+                    })
+                    .catch(err => {
+                        progressMessage.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color: var(--rose);"></i> Error: ${err.message || err}`;
+                        btn.disabled = false;
+                        tbody.style.opacity = '1';
+                    });
+            }
+
+            if (eventSource) {
+                try { eventSource.close(); } catch(e){}
+            }
+
+            try {
+                eventSource = new EventSource(`/api/scrape_stream?source=${source}&category=${category}&deep=${deep}`);
+
+                const streamTimeout = setTimeout(() => {
+                    if (btn.disabled && !fallbackTriggered) {
+                        console.warn("SSE stream idle, invoking direct REST fallback...");
+                        runFallbackFetch();
+                    }
+                }, 3500);
+
+                eventSource.onmessage = function(event) {
+                    if (fallbackTriggered) return;
+                    clearTimeout(streamTimeout);
+
+                    let data = null;
+                    try {
+                        data = JSON.parse(event.data);
+                    } catch(e) {
+                        return;
+                    }
+
+                    if (data.type === 'progress') {
+                        const pct = data.percent || 15;
+                        progressFill.style.width = `${pct}%`;
+                        progressPercent.innerText = `${pct}%`;
+                        progressMessage.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color: var(--accent);"></i> ${data.message}`;
+                    } 
+                    else if (data.type === 'complete') {
+                        progressFill.style.width = '100%';
+                        progressPercent.innerText = '100%';
+                        progressMessage.innerHTML = `<i class="fa-solid fa-circle-check" style="color: var(--success);"></i> Completed! Found ${data.count} job opportunities.`;
+
+                        currentJobs = data.jobs || [];
+                        filterJobs();
+                        updateStats(currentJobs, source);
+
+                        try { eventSource.close(); } catch(e){}
+                        btn.disabled = false;
+                        tbody.style.opacity = '1';
+
+                        setTimeout(() => {
+                            progressCard.style.display = 'none';
+                        }, 2500);
+                    } 
+                    else if (data.type === 'error') {
+                        runFallbackFetch();
+                    }
+                };
+
+                eventSource.onerror = function(err) {
+                    if (!fallbackTriggered) {
+                        runFallbackFetch();
+                    }
+                };
+            } catch(e) {
+                runFallbackFetch();
+            }
+        }
+
+        function renderJobs(jobs) {
+            const tbody = document.getElementById('jobsTbody');
+            if (!jobs || jobs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 3rem; color: var(--text-muted);">No job opportunities found matching the selected map location and filters.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = jobs.map((j, idx) => {
+                const badgeCls = getSourceBadgeClass(j.source);
+                const iconCls = getSourceIcon(j.source);
+                return `
+                <tr>
+                    <td>
+                        <span class="source-badge ${badgeCls}">
+                            <i class="fa-solid ${iconCls}"></i> ${j.source}
+                        </span>
+                    </td>
+                    <td><span class="badge-ref">${j.ref_no || '-'}</span></td>
+                    <td style="font-weight: 600; max-width: 250px;">
+                        <a href="${j.detail_url}" target="_blank" style="color: #38bdf8; text-decoration: none;" title="Open original advert on ${j.source}">
+                            ${j.title} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.72rem; margin-left: 0.25rem;"></i>
+                        </a>
+                    </td>
+                    <td>${j.employer || '-'}</td>
+                    <td style="color: var(--text-muted); font-size: 0.85rem;">${j.category_name || '-'}</td>
+                    <td><span class="badge-ref" style="background: rgba(99, 102, 241, 0.1); color: #818cf8;">${j.job_type || 'Full-Time'}</span></td>
+                    <td>${j.town ? `<span class="badge-location">${j.town}</span>` : '-'}</td>
+                    <td style="color: var(--text-muted); font-size: 0.82rem; white-space: nowrap;">
+                        <div><i class="fa-regular fa-calendar-check"></i> ${j.opening_date || '-'}</div>
+                        <div style="font-size: 0.78rem; opacity: 0.75;"><i class="fa-regular fa-clock"></i> ${j.closing_date || '-'}</div>
+                    </td>
+                    <td><span class="badge-salary">${j.salary || 'Negotiable'}</span></td>
+                    <td style="white-space: nowrap;">
+                        <button class="action-btn detail-btn" onclick="openDetailsModalByRef('${j.ref_no}')">
+                            <i class="fa-solid fa-eye"></i> Details
+                        </button>
+                        <a href="${j.detail_url}" target="_blank" class="action-btn" style="background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; border: none; font-weight: 600;">
+                            <i class="fa-solid fa-paper-plane"></i> Apply / Link
+                        </a>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        function openDetailsModalByRef(refNo) {
+            const j = currentJobs.find(item => item.ref_no === refNo);
+            if (!j) return;
+
+            const badgeCls = getSourceBadgeClass(j.source);
+            const iconCls = getSourceIcon(j.source);
+
+            document.getElementById('m-source-badge').className = `source-badge ${badgeCls}`;
+            document.getElementById('m-source-badge').innerHTML = `<i class="fa-solid ${iconCls}"></i> ${j.source}`;
+            document.getElementById('m-title').innerText = j.title || 'Job Details';
+            document.getElementById('m-employer').innerText = j.employer || 'Employer';
+
+            document.getElementById('m-ref').innerText = j.ref_no || '-';
+            document.getElementById('m-location').innerText = j.town || 'Sri Lanka';
+            document.getElementById('m-jobtype').innerText = j.job_type || 'Full-Time';
+            document.getElementById('m-salary').innerText = j.salary || 'Negotiable';
+            document.getElementById('m-opening').innerText = j.opening_date || '-';
+            document.getElementById('m-closing').innerText = j.closing_date || '-';
+            document.getElementById('m-snippet').innerText = j.detail_text || j.description_snippet || 'No extra summary text available for this advert.';
+            document.getElementById('m-link').href = j.detail_url || '#';
+
+            document.getElementById('jobModal').style.display = 'flex';
+        }
+
+        function closeModal(e) {
+            document.getElementById('jobModal').style.display = 'none';
+        }
+
+        function updateStats(jobs, sourceKey) {
+            document.getElementById('stat-total').innerText = jobs.length;
+            const employers = new Set(jobs.map(j => j.employer).filter(Boolean)).size;
+            document.getElementById('stat-employers').innerText = employers;
+            const locations = new Set(jobs.map(j => j.town).filter(Boolean)).size;
+            document.getElementById('stat-locations').innerText = locations;
+            
+            const sourceMap = {
+                'ALL': 'All 5 Portals',
+                'topjobs': 'TopJobs.lk',
+                'xpressjobs': 'XpressJobs.lk',
+                'rooster': 'Rooster.jobs',
+                'jobpal': 'Jobpal.lk',
+                'observerjobs': 'ObserverJobs.lk'
+            };
+            document.getElementById('stat-sources').innerText = sourceMap[sourceKey] || sourceKey;
+        }
+
+        function filterJobs() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filtered = currentJobs.filter(j => 
+                (j.title || '').toLowerCase().includes(q) ||
+                (j.employer || '').toLowerCase().includes(q) ||
+                (j.town || '').toLowerCase().includes(q) ||
+                (j.ref_no || '').toLowerCase().includes(q) ||
+                (j.source || '').toLowerCase().includes(q) ||
+                (j.category_name || '').toLowerCase().includes(q) ||
+                (j.job_type || '').toLowerCase().includes(q)
+            );
+
+            // Update interactive map markers with current filtered jobs
+            updateMapMarkers(filtered);
+
+            // If map district filter is active, filter by that location
+            if (activeMapFilterKey) {
+                filtered = filtered.filter(j => matchJobToLocationKey(j) === activeMapFilterKey);
+            }
+
+            renderJobs(filtered);
+        }
+
+        function exportData(type) {
+            if (currentJobs.length === 0) {
+                alert('No job data available to export! Please run a scrape first.');
+                return;
+            }
+            const source = document.getElementById('sourceSelect').value;
+            const category = document.getElementById('categorySelect').value;
+
+            if (type === 'json') {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentJobs, null, 2));
+                const dlAnchorElem = document.createElement('a');
+                dlAnchorElem.setAttribute("href", dataStr);
+                dlAnchorElem.setAttribute("download", `jobs_export_${source}.json`);
+                dlAnchorElem.click();
+            } else if (type === 'csv') {
+                window.location.href = `/api/export/csv?source=${source}&category=${category}`;
+            }
+        }
+
+        window.onload = () => {
+            initMap();
+            runScraperStream();
+        };
+    </script>
+</body>
+</html>
