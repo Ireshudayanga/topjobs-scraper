@@ -8,6 +8,8 @@ on:
 
 jobs:
   sync-repo:
+    # Only run if executing inside your local/source account, NOT the target repo
+    if: github.repository != 'Iresh-udayanga/topjobs-scraper'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
