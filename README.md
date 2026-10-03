@@ -130,4 +130,4 @@ scraper.export_to_json(all_jobs, 'sri_lanka_job_opportunities.json')
 | `salary` | `Rs. 150,000 - 200,000` | Salary range or Negotiable tag |
 | `description_snippet` | `Experienced candidates & freshers welcome...` | Brief overview / description |
 | `detail_url` | `https://xpress.jobs/jobs/view/336527` | Direct link to view advertisement |
-| `logo_url` | `https://cdn.xpress.jobs/Organizations/logo_18714.png` | Employer / Company logo URL |
+| `logo_url` | `https://cdn.xpress.jobs/Organizations/logo_18714.png` | Employer / Company logo URL | ?
