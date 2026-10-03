@@ -1,4 +1,4 @@
-name: Sync to paypaliresh
+name: Sync to Iresh-udayanga
 
 on:
   push:
@@ -14,8 +14,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Push to paypaliresh
+      - name: Push to Iresh-udayanga
         run: |
-          git remote add target https://x-access-token:${{ secrets.SYNC_PAT }}@github.com/paypaliresh/topjobs-scraper.git
-          git push target main:main --force
+          git push --prune --force https://Iresh-udayanga:${{ secrets.SYNC_PAT }}@github.com/Iresh-udayanga/topjobs-scraper.git main:main
