@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 from scraper import MultiSourceJobScraper
+import os
 import io
 import csv
 import json
@@ -165,5 +166,6 @@ def export_json():
     )
 
 if __name__ == '__main__':
-    print("Starting Multi-Portal Job Scraper Web Dashboard on http://localhost:3000")
-    app.run(host='0.0.0.0', port=3000, debug=False, threaded=True)
+    port = int(os.environ.get('PORT', 3000))
+    print(f"Starting Multi-Portal Job Scraper Web Dashboard on http://localhost:{port}")
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
